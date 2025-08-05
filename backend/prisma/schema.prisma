@@ -1,0 +1,231 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum ContratType {
+  auto
+  habitation
+  sante
+  vie
+  prevoyance
+  autre
+  multirisque
+  responsabilite_civile
+}
+
+enum ContratCategorie {
+  particulier
+  professionnel
+}
+
+enum ContratStatut {
+  actif
+  en_cours
+  resilie
+  suspendu
+}
+
+enum PartenaireType {
+  assureur
+  courtier_grossiste
+}
+
+enum PartenaireStatut {
+  actif
+  inactif
+}
+
+enum ContactStatut {
+  prospect
+  client
+}
+
+// MODELES
+model Contact {
+  id                Int           @id @default(autoincrement())
+  nom               String
+  prenom            String
+  email             String        
+  telephone         String
+  particulier       Boolean       @default(false)
+  professionnel     Boolean       @default(false)
+  professionalType  String?
+  statut            ContactStatut
+  entreprise        String?
+  siret             String?
+  dateNaissance     DateTime?     // 👈 Champ ajouté
+  dateCreation      DateTime      @default(now())
+  photoUrl          String?
+  portalAccess      Json?
+
+  
+  comptableNom          String?
+  comptablePrenom       String?
+  comptableTelephone    String?
+  comptableEmail        String?
+
+  // ✅ Adresse détaillée
+  numeroRue          String?
+  rue                String?
+  complement         String?
+  codePostal         String?
+  ville              String?
+  pays               String?
+
+
+  // ✅ Parrainage
+  parrainNom         String?
+  parrainPrenom      String?
+
+
+  commentaires       Commentaire[]
+  contrats           Contrat[]
+  documents          Document[]
+  historique         Historique[]
+
+  agenceId           Int?
+  agence             Agence?       @relation(fields: [agenceId], references: [id])
+
+  @@map("contacts")
+}
+
+model Historique {
+  id            Int        @id @default(autoincrement())
+  contactId     Int
+  date          DateTime   @default(now())
+  type          String
+  description   String
+  utilisateurId Int
+
+  contact       Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@map("historique_contacts")
+}
+
+model Contrat {
+  id                         Int        @id @default(autoincrement())
+  reference                  String     @unique
+  clientId                   Int
+  type                       ContratType
+  categorie                  ContratCategorie
+  statut                     ContratStatut
+  montantAnnuel              Float
+  dateDebut                  DateTime
+  dateFin                    DateTime
+  partenaireId               Int
+  commissionPremiereAnnee    Float
+  commissionAnneesSuivantes  Float
+  fraisDossier               Float
+  fraisDeCourtage            Float?     // ✅ Nouveau champ ajouté ici
+  fraisDossierRecurrent      Boolean    @default(false)
+
+  typeRisque                 String?    
+  formuleProduit             String?
+  dateResiliation            DateTime?
+  raisonResiliation          String?
+  porteurDeRisque            String?
+
+  client       Contact         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  partenaire   Partenaire      @relation(fields: [partenaireId], references: [id])
+  historique   ContratHistorique[]
+
+  @@map("contrats")
+}
+
+
+model ContratHistorique {
+  id                         Int       @id @default(autoincrement())
+  contratId                  Int
+  montantAnnuel              Float
+  dateDebut                  DateTime
+  dateFin                    DateTime
+  commissionPremiereAnnee    Float
+  commissionAnneesSuivantes  Float
+  fraisDossier               Float
+  fraisDossierRecurrent      Boolean   @default(false)
+  createdAt                  DateTime  @default(now())
+  createdBy                  String
+
+  contrat     Contrat @relation(fields: [contratId], references: [id], onDelete: Cascade)
+
+  @@map("contrat_historique")
+}
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  type        String
+  nom         String
+  url         String
+  dateUpload  DateTime  @default(now())
+  statut      String
+  metadonnees Json?
+  contactId   Int
+
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model Partenaire {
+  id               Int              @id @default(autoincrement())
+  nom              String
+  type             PartenaireType
+  produits         String[]
+  statut           PartenaireStatut
+  contactPrincipal String
+  email            String
+  telephone        String
+  siteWeb          String?
+  intranetUrl      String?
+  logoUrl          String?
+  porteurDeRisque   String?   // ✅ nouveau champ
+  typeProduit       String?   // ✅ nouveau champ
+
+  contrats         Contrat[]
+
+  @@map("partenaires")
+}
+
+model Utilisateur {
+  id            Int           @id @default(autoincrement())
+  nom           String
+  email         String        @unique
+  role          String
+  password      String?       @db.Text
+  avatar    String? // ✅ avatar facultatif (image URL)
+  resetToken     String?  
+  resetTokenExp  DateTime?
+
+  
+
+  commentaires  Commentaire[]
+  historiques   Historique[]
+}
+
+model Agence {
+  id       Int       @id @default(autoincrement())
+  nom      String
+  adresse  String
+
+  contacts Contact[]
+}
+
+model Commentaire {
+  id            Int       @id @default(autoincrement())
+  contenu       String
+  date          DateTime  @default(now())
+  contactId     Int
+  utilisateurId Int
+
+  contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+}

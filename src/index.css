@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #4F46E5;
+  --color-secondary: #EC4899;
+}
+
+.dark {
+  --color-primary: #818CF8;
+  --color-secondary: #F472B6;
+}
+
+@layer base {
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-700;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary-700;
+  }
+}
